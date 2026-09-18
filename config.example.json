@@ -1,0 +1,10 @@
+{
+  "cycle_layouts": [
+    "even-horizontal",
+    "even-vertical",
+    "main-horizontal",
+    "main-vertical",
+    "tiled"
+  ],
+  "main_ratio": 0.5
+}

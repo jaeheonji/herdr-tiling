@@ -1,0 +1,78 @@
+id = "herdr-tiling"
+name = "Herdr Tiling"
+version = "1.0.0"
+min_herdr_version = "0.9.0"
+description = "Hyprland-style pane movement and tmux-style layouts for Herdr"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["/bin/sh", "scripts/install-binary.sh"]
+
+[[startup]]
+command = ["target/release/herdr-tiling", "recover"]
+
+[[actions]]
+id = "move-left"
+title = "Move pane left"
+contexts = ["pane"]
+command = ["target/release/herdr-tiling", "move-left"]
+
+[[actions]]
+id = "move-right"
+title = "Move pane right"
+contexts = ["pane"]
+command = ["target/release/herdr-tiling", "move-right"]
+
+[[actions]]
+id = "move-up"
+title = "Move pane up"
+contexts = ["pane"]
+command = ["target/release/herdr-tiling", "move-up"]
+
+[[actions]]
+id = "move-down"
+title = "Move pane down"
+contexts = ["pane"]
+command = ["target/release/herdr-tiling", "move-down"]
+
+[[actions]]
+id = "toggle-split"
+title = "Toggle split direction"
+contexts = ["pane"]
+command = ["target/release/herdr-tiling", "toggle-split"]
+
+[[actions]]
+id = "cycle"
+title = "Cycle pane layout"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "cycle"]
+
+[[actions]]
+id = "even-horizontal"
+title = "Layout: even-horizontal"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "even-horizontal"]
+
+[[actions]]
+id = "even-vertical"
+title = "Layout: even-vertical"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "even-vertical"]
+
+[[actions]]
+id = "main-horizontal"
+title = "Layout: main-horizontal"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "main-horizontal"]
+
+[[actions]]
+id = "main-vertical"
+title = "Layout: main-vertical"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "main-vertical"]
+
+[[actions]]
+id = "tiled"
+title = "Layout: tiled"
+contexts = ["tab"]
+command = ["target/release/herdr-tiling", "tiled"]

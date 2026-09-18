@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          cargo_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+          plugin_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' herdr-plugin.toml | head -n 1)"
+          lock_version="$(awk '
+            /^\[\[package\]\]$/ { name = ""; version = "" }
+            /^name = / { name = $3; gsub(/"/, "", name) }
+            /^version = / { version = $3; gsub(/"/, "", version) }
+            name == "herdr-tiling" && version != "" { print version; exit }
+          ' Cargo.lock)"
+          test -n "$tag_version"
+          test "$tag_version" = "$cargo_version"
+          test "$tag_version" = "$plugin_version"
+          test "$tag_version" = "$lock_version"
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install musl tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes musl-tools
+      - name: Build
+        run: cargo build --release --locked --target "${{ matrix.target }}"
+      - name: Prepare asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="herdr-tiling-${{ matrix.target }}"
+          mkdir dist
+          cp "target/${{ matrix.target }}/release/herdr-tiling" "dist/$asset"
+          cd dist
+          if command -v sha256sum >/dev/null; then
+            sha256sum "$asset" > "$asset.sha256"
+          else
+            shasum -a 256 "$asset" > "$asset.sha256"
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: herdr-tiling-${{ matrix.target }}
+          path: dist/
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: herdr-tiling-*
+          path: dist
+          merge-multiple: true
+      - name: Prepare checksums
+        run: |
+          sort -k2 dist/*.sha256 > dist/SHA256SUMS
+          cd dist
+          sha256sum --check SHA256SUMS
+          rm ./*.sha256
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: ${{ runner.temp }}/release-notes.md
+      - name: Generate versioned changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+        env:
+          OUTPUT: ${{ runner.temp }}/CHANGELOG.md
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/release-notes.md
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/herdr-tiling-*
+            dist/SHA256SUMS
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: Prepare changelog commit
+        run: cp "$RUNNER_TEMP/CHANGELOG.md" CHANGELOG.md
+      - name: Commit changelog
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore(release): prepare for ${{ github.ref_name }}"
+          file_pattern: CHANGELOG.md
+      - name: Publish release
+        uses: softprops/action-gh-release@v3

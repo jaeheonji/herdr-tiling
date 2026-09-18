@@ -1,0 +1,23 @@
+[package]
+name = "herdr-tiling"
+version = "1.0.0"
+edition = "2024"
+authors = ["jaeheonji <atx6419@gmail.com>"]
+description = "Hyprland-style pane movement and tmux-style layouts for Herdr"
+license = "MIT"
+repository = "https://github.com/jaeheonji/herdr-tiling"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
