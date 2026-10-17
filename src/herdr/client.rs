@@ -67,6 +67,21 @@ pub struct MovedPane {
     pub tab_id: String,
 }
 
+/// Screen corner where Herdr shows a notification.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Position {
+    /// Top-left corner.
+    TopLeft,
+    /// Top-right corner.
+    #[default]
+    TopRight,
+    /// Bottom-left corner.
+    BottomLeft,
+    /// Bottom-right corner.
+    BottomRight,
+}
+
 /// Blocking client for Herdr's newline-delimited Unix socket API.
 #[derive(Debug)]
 pub struct Client {
@@ -218,6 +233,22 @@ impl Client {
         Ok(())
     }
 
+    /// Shows a silent notification. Herdr may decline (disabled, rate limited,
+    /// no foreground client); that is not an error.
+    pub fn notify(&mut self, title: &str, body: &str, position: Position) -> Result<(), Error> {
+        self.call(
+            "notification.show",
+            &NotifyParams {
+                title,
+                body,
+                position,
+                sound: "none",
+            },
+            "notification_show",
+        )?;
+        Ok(())
+    }
+
     fn move_pane(
         &mut self,
         pane_id: &str,
@@ -301,6 +332,14 @@ struct Response {
 struct ApiError {
     code: String,
     message: String,
+}
+
+#[derive(Serialize)]
+struct NotifyParams<'a> {
+    title: &'a str,
+    body: &'a str,
+    position: Position,
+    sound: &'static str,
 }
 
 #[derive(Serialize)]
@@ -750,6 +789,21 @@ mod tests {
             |request| assert_eq!(request["method"], "pane.focus"),
         );
         Client::new(socket).focus("w1:p1").unwrap();
+        server.join().unwrap();
+
+        let (socket, server) = serve_once(
+            "{\"id\":\"herdr-tiling-1\",\"result\":{\"type\":\"notification_show\",\"shown\":true}}",
+            |request| {
+                assert_eq!(request["method"], "notification.show");
+                assert_eq!(request["params"]["title"], "Layout");
+                assert_eq!(request["params"]["body"], "a → b");
+                assert_eq!(request["params"]["position"], "bottom-left");
+                assert_eq!(request["params"]["sound"], "none");
+            },
+        );
+        Client::new(socket)
+            .notify("Layout", "a → b", Position::BottomLeft)
+            .unwrap();
         server.join().unwrap();
 
         let (socket, server) = serve_once(

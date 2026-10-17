@@ -2,7 +2,7 @@ use std::{collections::HashSet, fs, path::Path};
 
 use serde::Deserialize;
 
-use crate::preset::Preset;
+use crate::{herdr::client::Position, preset::Preset};
 
 const CONFIG_FILE: &str = "config.json";
 
@@ -11,6 +11,8 @@ const CONFIG_FILE: &str = "config.json";
 pub(crate) struct Config {
     pub(crate) cycle_layouts: Vec<Preset>,
     pub(crate) main_ratio: f32,
+    pub(crate) notification: bool,
+    pub(crate) notification_position: Position,
 }
 
 impl Default for Config {
@@ -18,6 +20,8 @@ impl Default for Config {
         Self {
             cycle_layouts: Preset::ALL.to_vec(),
             main_ratio: 0.5,
+            notification: true,
+            notification_position: Position::default(),
         }
     }
 }
@@ -72,11 +76,13 @@ mod tests {
         let defaults = Config::load(&directory).unwrap();
         assert_eq!(defaults.cycle_layouts, Preset::ALL);
         assert_eq!(defaults.main_ratio, 0.5);
+        assert!(defaults.notification);
+        assert_eq!(defaults.notification_position, Position::TopRight);
 
         let path = directory.join(CONFIG_FILE);
         fs::write(
             &path,
-            br#"{"cycle_layouts":["tiled","even-horizontal"],"main_ratio":0.7}"#,
+            br#"{"cycle_layouts":["tiled","even-horizontal"],"main_ratio":0.7,"notification":false,"notification_position":"bottom-left"}"#,
         )
         .unwrap();
         let config = Config::load(&directory).unwrap();
@@ -85,12 +91,15 @@ mod tests {
             [Preset::Tiled, Preset::EvenHorizontal]
         );
         assert_eq!(config.main_ratio, 0.7);
+        assert!(!config.notification);
+        assert_eq!(config.notification_position, Position::BottomLeft);
 
         for invalid in [
             "not json",
             r#"{"cycle_layouts":[]}"#,
             r#"{"cycle_layouts":["tiled","tiled"]}"#,
             r#"{"main_ratio":1.0}"#,
+            r#"{"notification_position":"center"}"#,
             r#"{"unknown":true}"#,
         ] {
             fs::write(&path, invalid).unwrap();

@@ -132,7 +132,9 @@ mkdir -p "$config_dir"
     "main-vertical",
     "tiled"
   ],
-  "main_ratio": 0.5
+  "main_ratio": 0.5,
+  "notification": true,
+  "notification_position": "top-right"
 }
 ```
 
@@ -140,10 +142,26 @@ mkdir -p "$config_dir"
 | --- | --- | --- |
 | `cycle_layouts` | Presets used by the `cycle` action, in order. Valid values are `even-horizontal`, `even-vertical`, `main-horizontal`, `main-vertical`, and `tiled`. The list must not be empty or contain duplicates. | All five presets in the order above |
 | `main_ratio` | Share of the tab used by the main pane in `main-horizontal` and `main-vertical`. Must be between `0.1` and `0.9`. | `0.5` |
+| `notification` | Show a Herdr notification such as `even-horizontal → even-vertical` when a layout action changes the layout. No sound. | `true` |
+| `notification_position` | Notification corner: `top-left`, `top-right`, `bottom-left`, or `bottom-right`. | `"top-right"` |
 
-Both settings are optional. If `config.json` does not exist, the defaults above
+All settings are optional. If `config.json` does not exist, the defaults above
 are used. Unknown settings and invalid values are rejected before the layout
 changes.
+
+## Limitations
+
+Based on Herdr 0.9.5:
+
+- **Brief flicker.** Herdr cannot reshape a layout in place. Every action
+  rebuilds the layout by moving live panes through a temporary tab, so the
+  screen may flicker for a moment. Processes and scrollback are preserved.
+- **Fast layout changes may skip notifications.** Herdr rate-limits
+  notifications (about one per second) and does not let a plugin replace or
+  dismiss a toast. When you change layouts quickly, some notifications are
+  dropped and a newer one may not appear until the previous toast disappears.
+  The layout itself always changes correctly. Set `notification` to `false` to
+  turn notifications off.
 
 ## License
 

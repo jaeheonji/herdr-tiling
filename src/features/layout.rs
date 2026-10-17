@@ -98,11 +98,27 @@ pub(super) fn run(requested: Option<Preset>) -> Result<(), String> {
         .export_tab_layout(&tab_id)
         .map_err(|error| format!("export layout for tab {tab_id}: {error}"))?;
     let desired = transform(&original, preset, config.main_ratio);
+    let previous = state.get(&socket_path, &tab_id);
     if desired.root != original.root {
         rebuild::apply_locked(&mut client, &state_dir, &original, &desired)?;
+        if config.notification {
+            // Notification is best effort; the layout already changed.
+            let _ = client.notify(
+                "Layout changed",
+                &notification_body(previous, preset),
+                config.notification_position,
+            );
+        }
     }
     state.set(&socket_path, &tab_id, preset);
     state.save(&state_dir)
+}
+
+fn notification_body(previous: Option<Preset>, preset: Preset) -> String {
+    match previous {
+        Some(previous) if previous != preset => format!("{} → {}", previous.name(), preset.name()),
+        _ => preset.name().to_owned(),
+    }
 }
 
 fn required_path(name: &str) -> Result<PathBuf, String> {
@@ -334,6 +350,19 @@ mod tests {
         assert_eq!(
             next_preset(&cycle, Some(Preset::EvenVertical)),
             Preset::Tiled
+        );
+    }
+
+    #[test]
+    fn notification_body_shows_the_transition_when_known() {
+        assert_eq!(
+            notification_body(Some(Preset::EvenHorizontal), Preset::EvenVertical),
+            "even-horizontal → even-vertical"
+        );
+        assert_eq!(notification_body(None, Preset::Tiled), "tiled");
+        assert_eq!(
+            notification_body(Some(Preset::Tiled), Preset::Tiled),
+            "tiled"
         );
     }
 

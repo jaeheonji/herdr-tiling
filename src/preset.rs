@@ -11,6 +11,16 @@ pub(crate) enum Preset {
 }
 
 impl Preset {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::EvenHorizontal => "even-horizontal",
+            Self::EvenVertical => "even-vertical",
+            Self::MainHorizontal => "main-horizontal",
+            Self::MainVertical => "main-vertical",
+            Self::Tiled => "tiled",
+        }
+    }
+
     pub(crate) const ALL: [Self; 5] = [
         Self::EvenHorizontal,
         Self::EvenVertical,

@@ -6,5 +6,7 @@
     "main-vertical",
     "tiled"
   ],
-  "main_ratio": 0.5
+  "main_ratio": 0.5,
+  "notification": true,
+  "notification_position": "top-right"
 }
