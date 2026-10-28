@@ -1,6 +1,6 @@
 [package]
 name = "herdr-tiling"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 authors = ["jaeheonji <atx6419@gmail.com>"]
 description = "Hyprland-style pane movement and tmux-style layouts for Herdr"
